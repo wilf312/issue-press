@@ -20,7 +20,7 @@ GitHub Issues を一次情報源としたブログシステム
 | キャッシュ | Upstash Redis |
 | Markdown レンダリング | @deno/gfm (サーバーサイド) |
 | UI コンポーネント | @kaze/ui (CSR / React) |
-| クライアント描画 | React 18 + htm (CDN 経由) |
+| クライアント描画 | React 18 + Vite (frontend/) |
 
 ## アーキテクチャ
 
@@ -131,18 +131,27 @@ Request → Deno → Upstash GET → データなし → GitHub API fetch → Up
 
 ```
 issue-press/
-├── deno.json            # Deno 設定 / 依存関係
-├── main.ts              # API サーバー + SPA ホスト + OGP 対応
+├── deno.json              # Deno 設定 / 依存関係
+├── main.ts                # API サーバー + SPA ホスト + OGP 対応
 ├── lib/
-│   ├── github.ts        # GitHub API クライアント
-│   ├── markdown.ts      # Markdown → HTML 変換
-│   ├── ogp.ts           # OGP メタタグ生成（ボット向け）
-│   ├── cache.ts         # Upstash Redis ラッパー（Phase 2）
-│   └── feed.ts          # RSS 生成（Phase 3）
-├── static/
-│   ├── index.html       # SPA シェル（import map で CDN 読込）
-│   ├── app.js           # React CSR アプリ（@kaze/ui 使用）
-│   └── style.css        # カスタムスタイル
+│   ├── github.ts          # GitHub API クライアント
+│   ├── markdown.ts        # Markdown → HTML 変換
+│   ├── ogp.ts             # OGP メタタグ生成（ボット向け）
+│   ├── cache.ts           # Upstash Redis ラッパー（Phase 2）
+│   └── feed.ts            # RSS 生成（Phase 3）
+├── frontend/              # Vite + React CSR アプリ
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── index.html
+│   └── src/
+│       ├── main.tsx       # エントリポイント
+│       ├── App.tsx        # ルーティング + レイアウト
+│       ├── types.ts       # 型定義
+│       ├── style.css      # カスタムスタイル
+│       └── pages/
+│           ├── ListPage.tsx   # 記事一覧
+│           └── PostPage.tsx   # 個別記事（@kaze/ui 使用）
 └── README.md
 ```
 

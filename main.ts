@@ -49,7 +49,7 @@ async function serveStaticFile(path: string): Promise<Response | null> {
   }
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+export async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
 
@@ -104,4 +104,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error(error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}

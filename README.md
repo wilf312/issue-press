@@ -18,7 +18,9 @@ GitHub Issues を一次情報源としたブログシステム
 | ランタイム / ホスティング | Deno Deploy |
 | データソース | GitHub Issues API (REST or GraphQL) |
 | キャッシュ | Upstash Redis |
-| Markdown レンダリング | deno-gfm or marked |
+| Markdown レンダリング | @deno/gfm (サーバーサイド) |
+| UI コンポーネント | @kaze/ui (CSR / React) |
+| クライアント描画 | React 18 + htm (CDN 経由) |
 
 ## アーキテクチャ
 
@@ -98,10 +100,11 @@ Request → Deno → Upstash GET → データなし → GitHub API fetch → Up
 
 ### Phase 1: MVP（最小動作）
 
-- [ ] Deno プロジェクト初期化
-- [ ] GitHub Issues API からの fetch 処理
-- [ ] Markdown → HTML 変換
-- [ ] 最低限のテンプレート（記事ページ）
+- [x] Deno プロジェクト初期化
+- [x] GitHub Issues API からの fetch 処理
+- [x] Markdown → HTML 変換（サーバーサイド API）
+- [x] React CSR アプリ（@kaze/ui 統合）
+- [x] OGP メタタグ（ボット向け動的レンダリング）
 - [ ] Deno Deploy へデプロイ
 
 ### Phase 2: キャッシュ導入
@@ -115,7 +118,7 @@ Request → Deno → Upstash GET → データなし → GitHub API fetch → Up
 - [ ] 記事一覧ページ（ページネーション）
 - [ ] ラベルによるタグフィルタ
 - [ ] RSS フィード生成
-- [ ] OGP メタタグ（SNS シェア対応）
+- [x] OGP メタタグ（SNS シェア対応）— Phase 1 で実装済み
 
 ### Phase 4: 運用改善
 
@@ -124,23 +127,22 @@ Request → Deno → Upstash GET → データなし → GitHub API fetch → Up
 - [ ] エラーハンドリング（API 障害時は stale cache を返す）
 - [ ] アクセス解析（簡易）
 
-## ディレクトリ構成（想定）
+## ディレクトリ構成
 
 ```
 issue-press/
-├── deno.json
-├── main.ts            # エントリポイント / ルーティング
+├── deno.json            # Deno 設定 / 依存関係
+├── main.ts              # API サーバー + SPA ホスト + OGP 対応
 ├── lib/
-│   ├── github.ts      # GitHub API クライアント
-│   ├── cache.ts       # Upstash Redis ラッパー
-│   ├── markdown.ts    # Markdown → HTML 変換
-│   └── feed.ts        # RSS 生成
-├── templates/
-│   ├── layout.ts      # 共通レイアウト
-│   ├── post.ts        # 記事ページ
-│   └── list.ts        # 一覧ページ
+│   ├── github.ts        # GitHub API クライアント
+│   ├── markdown.ts      # Markdown → HTML 変換
+│   ├── ogp.ts           # OGP メタタグ生成（ボット向け）
+│   ├── cache.ts         # Upstash Redis ラッパー（Phase 2）
+│   └── feed.ts          # RSS 生成（Phase 3）
 ├── static/
-│   └── style.css
+│   ├── index.html       # SPA シェル（import map で CDN 読込）
+│   ├── app.js           # React CSR アプリ（@kaze/ui 使用）
+│   └── style.css        # カスタムスタイル
 └── README.md
 ```
 

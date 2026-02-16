@@ -5,13 +5,27 @@ import { renderOgpPage } from "./lib/ogp.ts";
 const BOT_UA_PATTERN =
   /Twitterbot|facebookexternalhit|Discordbot|Slackbot|LinkedInBot|Googlebot|bingbot|Applebot/i;
 
+const DIST_DIR = "./frontend/dist";
+
+const MIME_TYPES: Record<string, string> = {
+  html: "text/html",
+  css: "text/css",
+  js: "application/javascript",
+  json: "application/json",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  svg: "image/svg+xml",
+  ico: "image/x-icon",
+  woff: "font/woff",
+  woff2: "font/woff2",
+  ttf: "font/ttf",
+};
+
 function isBotRequest(req: Request): boolean {
   const ua = req.headers.get("user-agent") ?? "";
   return BOT_UA_PATTERN.test(ua);
-}
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return Response.json(data, { status });
 }
 
 function htmlResponse(html: string, status = 200): Response {
@@ -21,7 +35,21 @@ function htmlResponse(html: string, status = 200): Response {
   });
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+async function serveStaticFile(path: string): Promise<Response | null> {
+  try {
+    const filePath = `${DIST_DIR}${path}`;
+    const content = await Deno.readFile(filePath);
+    const ext = path.split(".").pop() ?? "";
+    const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
+    return new Response(content, {
+      headers: { "Content-Type": contentType },
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
 
@@ -31,67 +59,53 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (path === "/api/posts") {
       const page = Number(url.searchParams.get("page") ?? "1");
       const issues = await fetchIssues(page);
-      return jsonResponse(issues);
+      return Response.json(issues);
     }
 
     const apiPostMatch = path.match(/^\/api\/posts\/(\d+)$/);
     if (apiPostMatch) {
       const issue = await fetchIssue(Number(apiPostMatch[1]));
-      return jsonResponse({
+      return Response.json({
         ...issue,
         bodyHtml: renderMarkdown(issue.body ?? ""),
       });
     }
 
-    // ── Static files ──
-
-    if (path === "/static/gfm.css") {
+    if (path === "/api/gfm.css") {
       return new Response(GFM_CSS, {
         headers: { "Content-Type": "text/css; charset=utf-8" },
       });
     }
 
-    if (path.startsWith("/static/")) {
-      try {
-        const content = await Deno.readTextFile(`.${path}`);
-        const ext = path.split(".").pop();
-        const types: Record<string, string> = {
-          js: "application/javascript",
-          css: "text/css",
-          html: "text/html",
-        };
-        return new Response(content, {
-          headers: {
-            "Content-Type": `${types[ext ?? ""] ?? "text/plain"}; charset=utf-8`,
-          },
-        });
-      } catch {
-        return new Response("Not Found", { status: 404 });
-      }
-    }
-
-    // ── OGP for bots (individual posts) ──
+    // ── OGP for bots ──
 
     const postMatch = path.match(/^\/posts\/(\d+)$/);
     if (postMatch && isBotRequest(req)) {
       const issue = await fetchIssue(Number(postMatch[1]));
-      const ogpHtml = renderOgpPage(issue, url.origin);
-      return htmlResponse(ogpHtml);
+      return htmlResponse(renderOgpPage(issue, url.origin));
     }
 
-    // ── OGP for bots (top page) ──
-
     if (path === "/" && isBotRequest(req)) {
-      const ogpHtml = renderOgpPage(null, url.origin);
-      return htmlResponse(ogpHtml);
+      return htmlResponse(renderOgpPage(null, url.origin));
+    }
+
+    // ── Static files from frontend/dist ──
+
+    if (path !== "/") {
+      const staticResponse = await serveStaticFile(path);
+      if (staticResponse) return staticResponse;
     }
 
     // ── SPA fallback ──
 
-    const html = await Deno.readTextFile("./static/index.html");
-    return htmlResponse(html);
+    const indexHtml = await Deno.readTextFile(`${DIST_DIR}/index.html`);
+    return htmlResponse(indexHtml);
   } catch (error) {
     console.error(error);
-    return jsonResponse({ error: "Internal Server Error" }, 500);
+    return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}

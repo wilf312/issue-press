@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { Button } from "@kaze/ui";
+import {
+  Button,
+  H1,
+  Caption,
+  Badge,
+  Spinner,
+  Alert,
+  Separator,
+  Breadcrumb,
+} from "@kaze/ui";
 import type { PostData } from "../types";
 
 interface Props {
@@ -26,35 +35,56 @@ export function PostPage({ id, navigate }: Props) {
       .catch((e: Error) => setError(e.message));
   }, [id]);
 
-  if (error) return <p className="error">エラーが発生しました: {error}</p>;
-  if (!post) return <p className="loading">読み込み中...</p>;
+  if (error)
+    return (
+      <Alert variant="error" title="エラーが発生しました">
+        {error}
+      </Alert>
+    );
+  if (!post)
+    return (
+      <div className="center-content">
+        <Spinner size="lg" label="読み込み中..." />
+      </div>
+    );
 
   return (
     <article className="post">
-      <Button variant="secondary" onClick={() => navigate("/")}>
-        ← 記事一覧に戻る
-      </Button>
-      <h1>{post.title}</h1>
+      <Breadcrumb
+        items={[
+          {
+            label: "記事一覧",
+            href: "/",
+            onClick: (e: React.MouseEvent) => {
+              e.preventDefault();
+              navigate("/");
+            },
+          },
+          { label: post.title },
+        ]}
+      />
+      <H1>{post.title}</H1>
       <div className="post-meta">
-        <time dateTime={post.created_at}>
-          {new Date(post.created_at).toLocaleDateString("ja-JP")}
-        </time>
+        <Caption>
+          <time dateTime={post.created_at}>
+            {new Date(post.created_at).toLocaleDateString("ja-JP")}
+          </time>
+        </Caption>
         {post.labels.length > 0 && (
           <div className="tags">
             {post.labels.map((l) => (
-              <span
-                key={l.name}
-                className="tag"
-                style={
-                  { "--tag-color": `#${l.color}` } as React.CSSProperties
-                }
-              >
+              <Badge key={l.name} variant="secondary" size="sm">
+                <span
+                  className="tag-dot"
+                  style={{ backgroundColor: `#${l.color}` }}
+                />
                 {l.name}
-              </span>
+              </Badge>
             ))}
           </div>
         )}
       </div>
+      <Separator />
       <div
         className="post-body markdown-body"
         dangerouslySetInnerHTML={{ __html: post.bodyHtml }}

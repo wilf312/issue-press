@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link, Separator, Body, Caption } from "@kaze/ui";
 import { ListPage } from "./pages/ListPage";
 import { PostPage } from "./pages/PostPage";
 
@@ -31,33 +32,42 @@ export function App() {
 
   return (
     <div className="app">
-      <header>
-        <nav>
-          <a
+      <header className="header">
+        <nav className="header-nav">
+          <Link
+            variant="secondary"
+            size="lg"
+            underline="none"
             href="/"
-            className="site-title"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.preventDefault();
               navigate("/");
             }}
           >
-            issue-press
-          </a>
+            <strong>issue-press</strong>
+          </Link>
         </nav>
       </header>
-      <main>
+      <Separator />
+      <main className="main-content">
         {route.type === "post" && route.id ? (
           <PostPage id={route.id} navigate={navigate} />
         ) : (
           <ListPage navigate={navigate} />
         )}
       </main>
-      <footer>
-        <p>
-          Powered by <a href="https://github.com">GitHub Issues</a>
+      <Separator />
+      <footer className="footer">
+        <Caption>
+          Powered by{" "}
+          <Link variant="primary" size="sm" href="https://github.com" external>
+            GitHub Issues
+          </Link>
           {" & "}
-          <a href="https://deno.com/deploy">Deno Deploy</a>
-        </p>
+          <Link variant="primary" size="sm" href="https://deno.com/deploy" external>
+            Deno Deploy
+          </Link>
+        </Caption>
       </footer>
     </div>
   );

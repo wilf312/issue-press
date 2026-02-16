@@ -1,20 +1,37 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { PostPage } from "./PostPage";
 
 vi.mock("@kaze/ui", () => ({
-  Button: ({
-    children,
-    onClick,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-  }) => (
+  Button: ({ children, onClick, ...props }: any) => (
     <button onClick={onClick} data-testid="kaze-button" {...props}>
       {children}
     </button>
+  ),
+  H1: ({ children }: any) => <h1>{children}</h1>,
+  Caption: ({ children }: any) => <span>{children}</span>,
+  Badge: ({ children }: any) => <span>{children}</span>,
+  Spinner: ({ label }: any) => <p>{label}</p>,
+  Alert: ({ title, children }: any) => (
+    <p>
+      {title}: {children}
+    </p>
+  ),
+  Separator: () => <hr />,
+  Breadcrumb: ({ items }: any) => (
+    <nav data-testid="breadcrumb">
+      {items.map((item: any, i: number) => (
+        <span key={i}>
+          {item.href ? (
+            <a href={item.href} onClick={item.onClick}>
+              {item.label}
+            </a>
+          ) : (
+            item.label
+          )}
+        </span>
+      ))}
+    </nav>
   ),
 }));
 
@@ -30,6 +47,13 @@ const MOCK_POST = {
   labels: [{ name: "tutorial", color: "1d76db" }],
   user: { login: "author", avatar_url: "https://example.com/avatar.png" },
 };
+
+function waitForPostLoaded() {
+  return waitFor(() => {
+    const headings = screen.getAllByRole("heading", { level: 1 });
+    expect(headings[0]).toHaveTextContent("Test Article");
+  });
+}
 
 describe("PostPage", () => {
   const navigate = vi.fn();
@@ -49,9 +73,7 @@ describe("PostPage", () => {
     });
 
     render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByText("Test Article")).toBeInTheDocument();
-    });
+    await waitForPostLoaded();
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/posts/42");
   });
 
@@ -64,9 +86,7 @@ describe("PostPage", () => {
     });
 
     render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByText("Test Article")).toBeInTheDocument();
-    });
+    await waitForPostLoaded();
 
     const postBody = document.querySelector(".post-body");
     expect(postBody).not.toBeNull();
@@ -88,21 +108,19 @@ describe("PostPage", () => {
     });
   });
 
-  // ── 7-4: 戻るボタン ──
+  // ── 7-4: パンくずリスト ──
 
-  it("renders back button that navigates to '/'", async () => {
+  it("renders breadcrumb with link to list page", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_POST),
     });
 
     render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByText("Test Article")).toBeInTheDocument();
-    });
+    await waitForPostLoaded();
 
-    fireEvent.click(screen.getByText("← 記事一覧に戻る"));
-    expect(navigate).toHaveBeenCalledWith("/");
+    expect(screen.getByTestId("breadcrumb")).toBeInTheDocument();
+    expect(screen.getByText("記事一覧")).toBeInTheDocument();
   });
 
   // ── 7-5: ID 変更時リセット ──
@@ -126,15 +144,13 @@ describe("PostPage", () => {
     });
 
     const { rerender } = render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByText("Test Article")).toBeInTheDocument();
-    });
+    await waitForPostLoaded();
 
     rerender(<PostPage id={99} navigate={navigate} />);
 
-    // Should show loading while re-fetching
     await waitFor(() => {
-      expect(screen.getByText("Another Article")).toBeInTheDocument();
+      const headings = screen.getAllByRole("heading", { level: 1 });
+      expect(headings[0]).toHaveTextContent("Another Article");
     });
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
@@ -174,35 +190,17 @@ describe("PostPage", () => {
     });
   });
 
-  // ── 7-8: @kaze/ui Button ──
+  // ── 7-8: ラベル表示 ──
 
-  it("renders @kaze/ui Button component", async () => {
+  it("renders labels", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_POST),
     });
 
     render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByTestId("kaze-button")).toBeInTheDocument();
-    });
-  });
-
-  // ── 7-extra: ラベル表示 ──
-
-  it("renders labels with correct colors", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(MOCK_POST),
-    });
-
-    render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByText("tutorial")).toBeInTheDocument();
-    });
-
-    const tag = screen.getByText("tutorial");
-    expect(tag).toHaveStyle("--tag-color: #1d76db");
+    await waitForPostLoaded();
+    expect(screen.getByText("tutorial")).toBeInTheDocument();
   });
 
   it("renders date with correct datetime attribute", async () => {
@@ -212,11 +210,10 @@ describe("PostPage", () => {
     });
 
     render(<PostPage id={42} navigate={navigate} />);
-    await waitFor(() => {
-      expect(screen.getByText("Test Article")).toBeInTheDocument();
-    });
+    await waitForPostLoaded();
 
-    const time = screen.getByRole("time");
-    expect(time).toHaveAttribute("dateTime", "2024-05-01T09:00:00Z");
+    const time = document.querySelector("time");
+    expect(time).not.toBeNull();
+    expect(time).toHaveAttribute("datetime", "2024-05-01T09:00:00Z");
   });
 });

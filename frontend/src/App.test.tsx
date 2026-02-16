@@ -2,6 +2,17 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { App } from "./App";
 
+vi.mock("@kaze/ui", () => ({
+  Link: ({ children, href, onClick, external, variant, size, underline, ...props }: any) => (
+    <a href={href} onClick={onClick} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})} {...props}>
+      {children}
+    </a>
+  ),
+  Separator: () => <hr />,
+  Caption: ({ children }: any) => <span>{children}</span>,
+  Body: ({ children }: any) => <p>{children}</p>,
+}));
+
 // ルーティングテストのため子コンポーネントをモック
 vi.mock("./pages/ListPage", () => ({
   ListPage: ({ navigate }: { navigate: (path: string) => void }) => (
@@ -92,8 +103,7 @@ describe("App", () => {
     render(<App />);
     const link = screen.getByText("issue-press");
     expect(link).toBeInTheDocument();
-    expect(link.tagName).toBe("A");
-    expect(link).toHaveAttribute("href", "/");
+    expect(link.closest("a")).toHaveAttribute("href", "/");
   });
 
   it("renders footer with credits", () => {
